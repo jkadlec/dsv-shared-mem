@@ -1,0 +1,27 @@
+Projekt do DSV - sdílená pamět s read replikací - Python, XML RPC
+
+2 způsoby ovládání:
+	1.) přímo pomocí Pythonu a voláním metod pomocí RPC - metody:
+		- read(offset, delay) nebo kratší r(offset) - čtení hodnoty
+		- write(offset, value, delay) nebo kratšá w(offset, value) - zápis hodnoty
+		- dump_mem() - výpis celé paměti
+		- dump_status() - výpis interních proměnných
+		- disconnect() - odpojení nodu
+	2.) interaktivně přímo z programu. Příkazy:
+		- 'm': výpis paměti
+		- 'w KAM HODNOTA': zápis
+		- 'r ODKUD': čtení
+		- quit: ukončení
+
+popis odevzdaných souborů:
+	init.py: Spouštěčí skript.
+	client_init.py: Pomocná funkce pro řízení na dálku.
+	node.py: Třída Node
+
+Parametry spouštěcího skriptu:
+	První node:
+		./init.py first [IP_ADRESA] [PORT] [0/1 přepínač interaktivního ovládání]
+	Ostatní:
+		./init.py [IP_ADRESA nodu v "síti"] [PORT nodu v "síti"] [IP_ADRESA lokální] [PORT lokální] [0/1 přepínač interaktivního ovládání]
+
+Testováno na Python 2.7.3rc2
