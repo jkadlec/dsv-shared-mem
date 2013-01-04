@@ -2,10 +2,10 @@ import node as n, sys, time
 
 node_count = int(sys.argv[1])
 nodes = [None] * node_count
-nodes[0] = n.Node(None)
+nodes[0] = n.Node(None, {'ip':'127.0.0.1', 'port':'8000'})
 time.sleep(1)
-nodes[1] = n.Node(0)
-nodes[2] = n.Node(1)
+nodes[1] = n.Node({'ip':'127.0.0.1', 'port':'8000'}, {'ip':'127.0.0.1', 'port':'8001'})
+nodes[2] = n.Node({'ip':'127.0.0.1', 'port':'8000'}, {'ip':'127.0.0.1', 'port':'8002'})
 time.sleep(1)
 #print 'started first node'
 #for i in xrange(1, int(sys.argv[1])):
@@ -26,7 +26,7 @@ nodes[2].write(3, 112, 0)
 nodes[2].read(0, 0)
 
 
-nodes[3] = n.Node(2)
+nodes[3] = n.Node({'ip':'127.0.0.1', 'port':'8000'}, {'ip':'127.0.0.1', 'port':'8003'})
 
 nodes[2].disconnect()
 
