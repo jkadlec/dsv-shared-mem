@@ -4,30 +4,37 @@ import xmlrpclib, httplib, time, sys
 from threading import Thread
 from select import select
 
+
+_MEMORY_SIZE = 6
+
+
 #from http://stackoverflow.com/questions/268629/how-to-stop-basehttpserver-serve-forever-in-a-basehttprequesthandler-subclass
 class StoppableRPCServer(SimpleXMLRPCServer.SimpleXMLRPCServer):
 
     stopped = False
     allow_reuse_address = True
 
+
     def __init__(self, *args, **kw):
         SimpleXMLRPCServer.SimpleXMLRPCServer.__init__(self, *args, **kw)
         self.register_function(lambda: 'PONG', 'ping')
 
+
     def serve_forever(self):
         while not self.stopped:
             self.handle_request()
+
 
     def force_stop(self):
         self.stopped = True
         self.create_dummy_request()
         self.server_close()
 
+
     def create_dummy_request(self):
         server = xmlrpclib.Server('http://%s:%s' % self.server_address)
         server.ping()
 
-MEMORY_SIZE = 6
 
 def unique(array):
 	tmp = {}
@@ -36,22 +43,33 @@ def unique(array):
 			tmp[item] = 0
 	return list(tmp)
 
+
 def ret_tuple(my_id):
 	return (my_id['ip'], my_id['port'])
+
 
 # Restrict to a particular path.
 class RequestHandler(SimpleXMLRPCRequestHandler):
 	rpc_paths = ('/RPC2',)
 
+
 class Node:
+
+
 	def __del__(self):
 		self.server.force_stop()
 		sys.exit(0)
+
+
 	def crash(self):
 		self.server.force_stop()
 		sys.exit(-1)
+
+
 	def echo_about_read(self, offset, who):
 		self.have_offset[offset][ret_tuple(who)] = 1
+
+
 	def request(self, offset, who):
 		print self.id, ': Offset', offset, 'requested by ID', who, 'returning value', self.memory[offset]
 		self.have_offset[offset][ret_tuple(who)] = 1
@@ -61,6 +79,8 @@ class Node:
 			if proxy_key != ret_tuple(who):
 				proxy.echo_about_read(offset, who)
 		return self.memory[offset]
+
+
 	def invalidate(self, offset, inval_id):
 		print self.id, ':Invalidate on offset', offset ,'received from', inval_id
 		if self.memory[offset] == None:
@@ -74,6 +94,8 @@ class Node:
 			self.have_offset[offset] = {}
 			self.have_offset[offset][ret_tuple(inval_id)] = 1
 			self.memory[offset] = None
+
+
 	def send_invalidates(self, offset):
 		#get ids of nodes that have this value
 		print self.id, ':Sending invalidates for offset', offset
@@ -87,7 +109,9 @@ class Node:
 					self.proxies[proxy].invalidate(offset, self.id)
 				except:
 					print 'Sending invalidate failed'
-					proxy = None		
+					proxy = None
+
+
 	def read(self, offset, delay):
 		time.sleep(delay)
 		print self.id, ':read request on offset', offset, "(", self.memory[offset], ")"
@@ -109,6 +133,8 @@ class Node:
 				self.have_offset[offset][ret_tuple(self.id)] = 1
 			self.memory[offset] = value
 		return "READ offset="+str(offset)+", value="+str(self.memory[offset])
+
+
 	def write(self, offset, value, delay):
 		time.sleep(delay)
 		print self.id, ":Write on offset", offset, "value", value
@@ -117,10 +143,14 @@ class Node:
 		self.have_offset[offset][ret_tuple(self.id)] = 1
 		self.memory[offset] = value
 		return 'WRITE offset='+str(offset)+' value='+str(value)+' written successfuly.'
+
+
 	def echo_about_new_node(self, new_id):
 		print 'incoming new node', new_id
 		assert new_id != self.id
 		self.proxies[ret_tuple(new_id)] = xmlrpclib.ServerProxy('http://'+new_id['ip']+':'+new_id['port'], allow_none=True)
+
+
 	def register_new_node(self, new_id):
 		print self.id, 'Incoming node registration:', new_id
 		proxy_ids = []
@@ -140,11 +170,15 @@ class Node:
 		for item in self.have_offset:
 			return_offsets.append(list(item))
 		return return_offsets, proxy_ids
+
+
 	def print_memory(self):
 		print self.id, ':memory dump: ', 
-		for i in xrange(MEMORY_SIZE):
+		for i in xrange(_MEMORY_SIZE):
 			print self.memory[i],
 		print
+
+
 	def disconnection_annoucement(self, disc_id):
 		print self.id, ':Got disconnection annoucement from id', disc_id
 		for offset_info in self.have_offset:
@@ -152,12 +186,16 @@ class Node:
 				offset_info.pop(ret_tuple(disc_id))
 
 		self.proxies[ret_tuple(disc_id)] = None
+
+
 	def print_status(self):
 		print self.id, ':Status:'
 		print 'server: ', self.server
 		print 'proxies: ', self.proxies
 		print 'info about others', self.have_offset
 		print 'memory: ', self.memory
+
+
 	def disconnect(self):
 		print 'sending goodbyes'
 		for proxy in self.proxies:
@@ -166,6 +204,8 @@ class Node:
 			except:
 				pass
 		self.__del__()
+
+
 	def server_start(self):
 		# Create server
 		self.server = StoppableRPCServer((self.id['ip'], int(self.id['port'])), requestHandler=RequestHandler, allow_none=True)
@@ -173,6 +213,8 @@ class Node:
 		#Register calls
 		self.server.register_instance(self)
 		self.server.serve_forever()
+
+
 	def console_start(self):
 		self.console_running = True
 		run = True
@@ -191,19 +233,29 @@ class Node:
 			elif user_input == 'm':
 				print self.memory
 		self.console_thread.join()
+
+
 	def dump_mem(self):
 		return 'MEMORY: '+str(self.memory)
+
+
 	def dump_status(self):
 		return 'STATUS: PROXIES:'+str(self.proxies)+' INFO:'+str(self.have_offset)
+
+
 	def r(self, offset):
 		return self.read(offset, 0)
+
+
 	def w(self, offset, value):
 		return self.write(offset, value, 0)
+
+
 	def __init__(self, prev_id, my_id, console):
 		self.id = my_id
-		self.memory = [None] * MEMORY_SIZE
+		self.memory = [None] * _MEMORY_SIZE
 		self.proxies = {}
-		self.have_offset = [dict() for x in xrange(MEMORY_SIZE)]
+		self.have_offset = [dict() for x in xrange(_MEMORY_SIZE)]
 		print 'starting node, previous:', prev_id
 		if not prev_id == None:
 			print 'not the first node, have to register with others, previous:', prev_id
@@ -213,7 +265,7 @@ class Node:
 			offset_ids, proxy_ids = initiator_proxy.register_new_node(self.id)
 			print 'new node got these offsets', offset_ids
 			print 'new node got these proxies', proxy_ids
-			for i in xrange(MEMORY_SIZE):
+			for i in xrange(_MEMORY_SIZE):
 				if offset_ids[i] != []:
 					for dict_ids in offset_ids[i]:
 						self.have_offset[i][(dict_ids[0], dict_ids[1])] = 1
